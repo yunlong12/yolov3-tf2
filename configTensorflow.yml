@@ -2,5 +2,5 @@ version: '2.3'
 
 services:
     RunMyImage:
-        image: yunlongwang/tensorflow:fromDockerFile
+        image: yunlongwang/tensorflow:fromDockfile
         runtime: nvidia

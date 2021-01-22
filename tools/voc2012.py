@@ -12,8 +12,8 @@ os.chdir('/opt/project')
 
 flags.DEFINE_string('data_dir', './data/voc2012_raw/VOCdevkit/VOC2012/',
                     'path to raw PASCAL VOC dataset')
-flags.DEFINE_enum('split', 'val', [
-                  'train', 'val'], 'specify train or val spit')
+flags.DEFINE_enum('split', 'validMy', [
+                  'trainMy', 'validMy'], 'specify train or val spit')
 flags.DEFINE_string('output_file', './data/voc2012_val.tfrecord', 'outpot dataset')
 flags.DEFINE_string('classes', './data/voc2012.names', 'classes file')
 
@@ -47,7 +47,7 @@ def build_example(annotation, class_map):
             ymax.append(float(obj['bndbox']['ymax']) / height)
             classes_text.append(obj['name'].encode('utf8'))
             classes.append(class_map[obj['name']])
-            truncated.append(int(obj['truncated']))
+            truncated.append(0)#(int(obj['truncated']))
             views.append(obj['pose'].encode('utf8'))
 
     example = tf.train.Example(features=tf.train.Features(feature={

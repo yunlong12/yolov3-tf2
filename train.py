@@ -1,7 +1,8 @@
 from absl import app, flags, logging
 from absl.flags import FLAGS
-
+from datetime import datetime
 import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 import cv2
 from tensorflow.keras.callbacks import (
@@ -21,14 +22,14 @@ import yolov3_tf2.dataset as dataset
 flags.DEFINE_string('dataset', './data/voc2012_train.tfrecord', 'path to dataset')
 flags.DEFINE_string('val_dataset', './data/voc2012_val.tfrecord', 'path to validation dataset')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
-flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
+flags.DEFINE_string('weights', './checkpoints/yolov3_train_47.tf',
                     'path to weights file')
 flags.DEFINE_string('classes', './data/voc2012.names', 'path to classes file')
 flags.DEFINE_enum('mode', 'fit', ['fit', 'eager_fit', 'eager_tf'],
                   'fit: model.fit, '
                   'eager_fit: model.fit(run_eagerly=True), '
                   'eager_tf: custom GradientTape')
-flags.DEFINE_enum('transfer', 'darknet',
+flags.DEFINE_enum('transfer', 'none',
                   ['none', 'darknet', 'no_output', 'frozen', 'fine_tune'],
                   'none: Training from scratch, '
                   'darknet: Transfer darknet, '
@@ -36,12 +37,18 @@ flags.DEFINE_enum('transfer', 'darknet',
                   'frozen: Transfer and freeze all, '
                   'fine_tune: Transfer all and freeze darknet only')
 flags.DEFINE_integer('size', 416, 'image size')
-flags.DEFINE_integer('epochs', 10, 'number of epochs')
-flags.DEFINE_integer('batch_size', 16, 'batch size')
+flags.DEFINE_integer('epochs', 1000, 'number of epochs')
+flags.DEFINE_integer('batch_size', 20, 'batch size')
 flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
 flags.DEFINE_integer('num_classes', 20, 'number of classes in the model')
 flags.DEFINE_integer('weights_num_classes', 80, 'specify num class for `weights` file if different, '
                      'useful in transfer learning with different number of classes')
+
+
+class CustomCallback(keras.callbacks.Callback):
+    def on_train_begin(self, logs=None):
+        keys = list(logs.keys())
+        print("Starting training; got log keys: {}=================================".format(keys))
 
 
 def main(_argv):
@@ -176,12 +183,24 @@ def main(_argv):
         model.compile(optimizer=optimizer, loss=loss,
                       run_eagerly=(FLAGS.mode == 'eager_fit'))
 
+        def scheduler(epoch, lr):
+            f = open("LearningRate.txt")
+            lines = f.read()
+            lr = float(lines)
+            print("-------------learning rate is changed to be {}----------".format(lr))
+            return lr
+
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        current_time = current_time.replace(":","_")
         callbacks = [
             ReduceLROnPlateau(verbose=1),
-            EarlyStopping(patience=3, verbose=1),
+            #EarlyStopping(patience=3, verbose=1),
             ModelCheckpoint('checkpoints/yolov3_train_{epoch}.tf',
                             verbose=1, save_weights_only=True),
-            TensorBoard(log_dir='logs')
+            TensorBoard(log_dir='./logs/{}'.format(current_time)),
+            CustomCallback(),
+            tf.keras.callbacks.LearningRateScheduler(scheduler)
         ]
 
         history = model.fit(train_dataset,
