@@ -56,15 +56,17 @@ def main(_argv):
     for physical_device in physical_devices:
         tf.config.experimental.set_memory_growth(physical_device, True)
 
-    if FLAGS.tiny:
-        model = YoloV3Tiny(FLAGS.size, training=True,
-                           classes=FLAGS.num_classes)
-        anchors = yolo_tiny_anchors
-        anchor_masks = yolo_tiny_anchor_masks
-    else:
-        model = YoloV3(FLAGS.size, training=True, classes=FLAGS.num_classes)
-        anchors = yolo_anchors
-        anchor_masks = yolo_anchor_masks
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+    with mirrored_strategy.scope():
+        if FLAGS.tiny:
+            model = YoloV3Tiny(FLAGS.size, training=True,
+                               classes=FLAGS.num_classes)
+            anchors = yolo_tiny_anchors
+            anchor_masks = yolo_tiny_anchor_masks
+        else:
+            model = YoloV3(FLAGS.size, training=True, classes=FLAGS.num_classes)
+            anchors = yolo_anchors
+            anchor_masks = yolo_anchor_masks
 
     if FLAGS.dataset:
         train_dataset = dataset.load_tfrecord_dataset(
